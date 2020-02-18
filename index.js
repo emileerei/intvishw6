@@ -1,33 +1,41 @@
-// chart("data.csv", "blue");
-createStream("mbta_total_monthly.csv", "blue", "totalmonthlychart");
-createStream("mbta_weekday_avg.csv", "pink", "avgweeklychart");
+chart("updated_total.csv", 1);
+chart("updated_average.csv", 2);
 
 var datearray = [];
 var colorrange = [];
 
+function chart(csvpath, chartNum) {
+  // color scheme
+  colorrange = [
+    "#741647", // commuter
+    "#e06666", // bus (bus)
+    "#d9d9d9", // bus (silver line)
+    "#333333", // RIDE
+    "#cc0000", // rail (red)
+    "#38761d", // rail (green)
+    "#6fa8dc", // rail (blue)
+    "#ff9900", // rail (orange)
+    "#0c343d" // ferry
+    ];
+  strokecolor = "#fff";
 
-function createStream(csvpath, color, chartTitle) {
-  // color scheme choices
-  if (color == "blue") {
-    colorrange = ["#045A8D", "#2B8CBE", "#74A9CF", "#A6BDDB", "#D0D1E6", "#F1EEF6"];
+  // replacing all .chart with corresponding class name
+  chartString = "";
+  if (chartNum == 1) {
+    chartString = ".chart";
+  } else {
+    chartString = ".chart2";
   }
-  else if (color == "pink") {
-    colorrange = ["#980043", "#DD1C77", "#DF65B0", "#C994C7", "#D4B9DA", "#F1EEF6"];
-  }
-  else if (color == "orange") {
-    colorrange = ["#B30000", "#E34A33", "#FC8D59", "#FDBB84", "#FDD49E", "#FEF0D9"];
-  }
-  strokecolor = colorrange[0];
 
   // time formatting
   var format = d3.time.format("%Y-%m-%dT%H:%M:%S.%LZ");
 
-  // formatting of chart
-  var margin = { top: 20, right: 40, bottom: 30, left: 30 };
+  // svg/chart positioning
+  var margin = { top: 20, right: 90, bottom: 30, left: 70 };
   var width = document.body.clientWidth - margin.left - margin.right;
   var height = 400 - margin.top - margin.bottom;
 
-  // tooltip -- for hovering purposes
+  // placement of tooltip text
   var tooltip = d3.select("body")
     .append("div")
     .attr("class", "remove")
@@ -35,25 +43,22 @@ function createStream(csvpath, color, chartTitle) {
     .style("z-index", "20")
     .style("visibility", "hidden")
     .style("top", "30px")
-    .style("left", "55px");
+    .style("left", "50px");
 
-  // x-axis is time axis so scaling for that
   var x = d3.time.scale()
     .range([0, width]);
 
-  // linear y scaling
   var y = d3.scale.linear()
     .range([height - 10, 0]);
 
-  // assignment and ordering of stacked colors
   var z = d3.scale.ordinal()
     .range(colorrange);
 
-  // draw out the x and y axes
+  // x and y axis setup
   var xAxis = d3.svg.axis()
     .scale(x)
     .orient("bottom")
-    .ticks(d3.time.weeks);
+    .ticks(d3.time.years);
 
   var yAxis = d3.svg.axis()
     .scale(y);
@@ -62,56 +67,47 @@ function createStream(csvpath, color, chartTitle) {
     .scale(y);
 
   var stack = d3.layout.stack()
-    .offset("silhouette")
+    .offset("wiggle")
+    .order(function (d) {
+      console.log(d);
+      return d3.range(d.length);
+    })
     .values(function (d) { return d.values; })
-    .x(function (d) { return d.service_date; })
-    .y(function (d) { return d.total_monthly_ridership; });
-    //.x(function (d) { return d.date; })
-    //.y(function (d) { return d.value; });
+    .x(function (d) { return d.date; })
+    .y(function (d) { return d.value; });
 
   var nest = d3.nest()
-    //.key(function (d) { return d.key; });
     .key(function (d) { return d.mode; });
 
   var area = d3.svg.area()
     .interpolate("cardinal")
-    //.x(function (d) { return x(d.date); })
-    .x(function (d) { return x(d.service_date); })
+    .x(function (d) { return x(d.date); })
     .y0(function (d) { return y(d.y0); })
     .y1(function (d) { return y(d.y0 + d.y); });
 
-  var svg = d3.select(".chart").append("svg")
+  var svg = d3.select(chartString).append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-  // parse the csv file for numbers/data
   var graph = d3.csv(csvpath, function (data) {
     data.forEach(function (d) {
-      d.service_date = format.parse(d.service_date);
-      d.mode = +d.mode;
-      d.route_or_line = +d.route_or_line;
-      // one dataset = total_monthly_ridership
-      d.total_monthly_ridership = +d.total_monthly_ridership;
-      // second dataset = average_monthly_ridership
-      d.average_monthly_ridership = +d.average_monthly_ridership;
+      d.date = format.parse(d.date);
+      d.value = +d.value;
     });
 
     var layers = stack(nest.entries(data));
 
-    //x.domain(d3.extent(data, function (d) { return d.date; }));
-    x.domain(d3.extent(data, function (d) { return d.service_date; }));
+    x.domain(d3.extent(data, function (d) { return d.date; }));
     y.domain([0, d3.max(data, function (d) { return d.y0 + d.y; })]);
-
-    // svg visualization jstuff
+    
     svg.selectAll(".layer")
       .data(layers)
       .enter().append("path")
       .attr("class", "layer")
       .attr("d", function (d) { return area(d.values); })
       .style("fill", function (d, i) { return z(i); });
-
 
     svg.append("g")
       .attr("class", "x axis")
@@ -141,24 +137,21 @@ function createStream(csvpath, color, chartTitle) {
         mousex = d3.mouse(this);
         mousex = mousex[0];
         var invertedx = x.invert(mousex);
-        invertedx = invertedx.getMonth() + invertedx.getDate();
+        invertedx = invertedx.getYear() + invertedx.getMonth();
         var selected = (d.values);
         for (var k = 0; k < selected.length; k++) {
-          //datearray[k] = selected[k].date
-          datearray[k] = selected[k].service_date
-          datearray[k] = datearray[k].getMonth() + datearray[k].getDate();
+          datearray[k] = selected[k].date
+          datearray[k] = datearray[k].getYear() + datearray[k].getMonth();
         }
 
         mousedate = datearray.indexOf(invertedx);
-        console.log(d.values)
         pro = d.values[mousedate].value;
 
         d3.select(this)
           .classed("hover", true)
           .attr("stroke", strokecolor)
           .attr("stroke-width", "0.5px"),
-          //tooltip.html("<p>" + d.key + "<br>" + pro + "</p>").style("visibility", "visible");
-          tooltip.html("<p>" + d.mode + "<br>" + pro + "</p>").style("visibility", "visible");
+          tooltip.html("<p>" + d.key + "<br>" + pro + "</p>").style("visibility", "visible");
 
       })
       .on("mouseout", function (d, i) {
@@ -168,8 +161,7 @@ function createStream(csvpath, color, chartTitle) {
           .attr("opacity", "1");
         d3.select(this)
           .classed("hover", false)
-          //.attr("stroke-width", "0px"), tooltip.html("<p>" + d.key + "<br>" + pro + "</p>").style("visibility", "hidden");
-          .attr("stroke-width", "0px"), tooltip.html("<p>" + d.mode + "<br>" + pro + "</p>").style("visibility", "hidden");
+          .attr("stroke-width", "0px"), tooltip.html("<p>" + d.key + "<br>" + pro + "</p>").style("visibility", "hidden");
       })
 
     var vertical = d3.select(".chart")
@@ -184,7 +176,7 @@ function createStream(csvpath, color, chartTitle) {
       .style("left", "0px")
       .style("background", "#fff");
 
-    d3.select(".chart")
+    d3.select(chartString)
       .on("mousemove", function () {
         mousex = d3.mouse(this);
         mousex = mousex[0] + 5;
@@ -196,62 +188,4 @@ function createStream(csvpath, color, chartTitle) {
         vertical.style("left", mousex + "px")
       });
   });
-}
-
-function createStackedBar() {
-  var svgW = 150;
-  var svgH = 150;
-  var x_axisLength = 160;
-  var x_axispos = 82;
-
-  var svg = d3.select('#graph')
-    .append('svg')
-    .attr('width', svgW + 800)
-    .attr('height', svgH + 100)
-    .append('g');
-    
-  // giving names to the different vars to the csv data
-  var dataset = d3.layout.stack()(['', 'Milk', 'MilkFoam', 'ChocolateSyrup', 'Water'].map(function (coffeeData) {
-    return data.map(function (d) {
-      return {
-        x: d.Coffee,
-        y: +d[coffeeData],
-        z: coffeeData
-      };
-    });
-  }));
-
-  // yScale to scale data to graph height
-  var yScale = d3.scale.linear()
-    .domain([0, d3.max(dataset, function (d) {
-      return d3.max(d, function (d) {
-        return d.y0 + d.y;
-      });
-    })])
-    .range([svgH, 0]);
-
-  // group and bind data
-  // d = data value, i = index of rect
-  var groups = svg.selectAll('g.Coffee')
-    .data(dataset)
-    .enter().append('g')
-    .attr('class', 'Coffee')
-    .style('fill', function (d, i) {
-      return colors[i];
-    });
-
-  // stacked bar creation
-  var rect = groups.selectAll('rect')
-    .data(function (d) { return d; })
-    .enter();
-  rect.append('rect')
-    .attr('x', x_axispos) // spaces data by 5px and 30 px from lhs
-    .attr('y', function (d) { return 30 + yScale(d.y0 + d.y); }) // aligns data at bottom of chart
-    .attr('width', x_axisLength)
-    .attr('height', 0)
-    .transition()
-    .delay(function (d) { return 750 * d.y0; })
-    .duration(700)
-    .attr('height', function (d) { return yScale(d.y0) - yScale(d.y0 + d.y); });
-
 }
