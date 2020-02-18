@@ -1,12 +1,13 @@
-chart("data.csv", "blue");
-createStackedBar("");
+// chart("data.csv", "blue");
+createStream("mbta_total_monthly.csv", "blue", "totalmonthlychart");
+createStream("mbta_weekday_avg.csv", "pink", "avgweeklychart");
 
 var datearray = [];
 var colorrange = [];
 
 
-function chart(csvpath, color) {
-
+function createStream(csvpath, color, chartTitle) {
+  // color scheme choices
   if (color == "blue") {
     colorrange = ["#045A8D", "#2B8CBE", "#74A9CF", "#A6BDDB", "#D0D1E6", "#F1EEF6"];
   }
@@ -18,15 +19,15 @@ function chart(csvpath, color) {
   }
   strokecolor = colorrange[0];
 
-  // format
-  //var format = d3.time.format("%m/%d/%y");
-  //var format = d3.time.format("%y-%m-%d");
+  // time formatting
   var format = d3.time.format("%Y-%m-%dT%H:%M:%S.%LZ");
 
+  // formatting of chart
   var margin = { top: 20, right: 40, bottom: 30, left: 30 };
   var width = document.body.clientWidth - margin.left - margin.right;
   var height = 400 - margin.top - margin.bottom;
 
+  // tooltip -- for hovering purposes
   var tooltip = d3.select("body")
     .append("div")
     .attr("class", "remove")
@@ -36,15 +37,19 @@ function chart(csvpath, color) {
     .style("top", "30px")
     .style("left", "55px");
 
+  // x-axis is time axis so scaling for that
   var x = d3.time.scale()
     .range([0, width]);
 
+  // linear y scaling
   var y = d3.scale.linear()
     .range([height - 10, 0]);
 
+  // assignment and ordering of stacked colors
   var z = d3.scale.ordinal()
     .range(colorrange);
 
+  // draw out the x and y axes
   var xAxis = d3.svg.axis()
     .scale(x)
     .orient("bottom")
@@ -81,8 +86,8 @@ function chart(csvpath, color) {
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    // parse
-  var graph = d3.csv('mbtadata.csv', function (data) {
+  // parse the csv file for numbers/data
+  var graph = d3.csv(csvpath, function (data) {
     data.forEach(function (d) {
       d.service_date = format.parse(d.service_date);
       d.mode = +d.mode;
