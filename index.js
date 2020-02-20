@@ -4,6 +4,7 @@ chart("updated_average.csv", 2);
 
 var datearray = [];
 var colorrange = [];
+var legendcolors = [];
 
 function chart(csvpath, chartNum) {
   // color scheme
@@ -19,6 +20,19 @@ function chart(csvpath, chartNum) {
     "#38a6a5" // ferry
     ];
   strokecolor = "#000";
+
+  // different order for legend
+  var legendcolors = [
+    "#e17c05", // rail (orange)
+    "#1d6996", // rail (blue)
+    "#0f8554", // rail (green)
+    "#cc503e", // rail (red)
+    "#38a6a5", // ferry
+    "#666666", // bus (silver line)
+    "#994e95", // RIDE
+    "#edad08", // bus (bus)
+    "#5f4690"  // commuter
+  ];
 
   // replacing all .chart with corresponding class name
   var chartString = "";
@@ -102,7 +116,7 @@ function chart(csvpath, chartNum) {
 
   // legend creation
   var legend = svg.selectAll('legend')
-    .data(colorrange)
+    .data(legendcolors)
     .enter().append('g')
     .attr('class', 'legend')
     .style('z-index', '25')
@@ -112,7 +126,7 @@ function chart(csvpath, chartNum) {
     .attr('y', 20)
     .attr('width', 18)
     .attr('height', 18)
-    .style('fill', function (d, i) { return colorrange[i]; });
+    .style('fill', function (d, i) { return legendcolors[i]; });
 
   legend.append("text")
     .attr("x", 23)
@@ -122,15 +136,15 @@ function chart(csvpath, chartNum) {
     .style("font-size", "10.5px")
     .text(function (d, i) {
       switch (i) {
-        case 0: return "Commuter Rail";
-        case 1: return "Bus (Bus)";
-        case 2: return "Bus (Silver Line)";
-        case 3: return "The RIDE";
-        case 4: return "Rail (Red)";
-        case 5: return "Rail (Green)";
-        case 6: return "Rail (Blue)";
-        case 7: return "Rail (Orange)";
-        case 8: return "Ferry (Boat-F1)";
+        case 0: return "Rail (Orange)";
+        case 1: return "Rail (Blue)";
+        case 2: return "Rail (Green)";
+        case 3: return "Rail (Red)";
+        case 4: return "Ferry (Boat-F1)";
+        case 5: return "Bus (Silver Line)";
+        case 6: return "The RIDE";
+        case 7: return "Bus (Bus)";
+        case 8: return "Commuter Rail";
       }
     });
 
